@@ -148,3 +148,30 @@ export const updateIsClaimed = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
+
+
+export const deleteStake = async (req, res) => {
+  try {
+    const { stakeAddress, userAddress } = req.body;
+
+    // Validate required fields
+    if (!stakeAddress || !userAddress) {
+      return res.status(400).json({ message: "Stake address and user address are required." });
+    }
+
+    // Find and delete the stake
+    const deletedStake = await Stake.findOneAndDelete({
+      stakeAddress,
+      userAddress
+    });
+
+    if (!deletedStake) {
+      return res.status(404).json({ message: "Stake not found." });
+    }
+
+    res.status(200).json({ message: "Stake deleted successfully.", stake: deletedStake });
+  } catch (error) {
+    console.error("Error deleting stake:", error);
+    res.status(500).json({ message: "Error deleting stake", error: error.message });
+  }
+};

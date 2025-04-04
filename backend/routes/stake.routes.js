@@ -3,7 +3,8 @@ import {
   createStake,
   getProbabilityTrends,
   getUserStakes,
-  updateIsClaimed
+  updateIsClaimed,
+  deleteStake
 } from "../controllers/stake.controllers.js";
 
 const router = express.Router();
@@ -19,5 +20,8 @@ router.get("/user/:userAddress", getUserStakes);
 
 // Route to update isClaimed status
 router.put("/updateClaim",updateIsClaimed)
+
+// Route to delete a stake
+router.delete("/delete", deleteStake);
 
 export default router;
