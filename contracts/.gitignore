@@ -1,0 +1,30 @@
+# Foundry build artifacts
+out/
+cache/
+broadcast/
+lib/
+
+# Dependencies
+foundry.toml.lock
+
+# Compiled binary files
+*.a
+*.o
+*.so
+*.dylib
+*.exe
+
+# Logs
+*.log
+
+# Node modules (if using JS tools)
+node_modules/
+
+# VS Code settings
+.vscode/
+
+# MacOS system files
+.DS_Store
+
+# Environment variables
+.env

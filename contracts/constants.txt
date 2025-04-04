@@ -1,0 +1,7 @@
+//usdc token address on sepolia testnet
+
+//usdc is deployed by circle
+USDC_ADDRESS=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
+Fee_Address=0xD03cBa7a8B0D9aB531172eA087d17f0741200d5b
+
+
