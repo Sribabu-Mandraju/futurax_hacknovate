@@ -1,148 +1,212 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { X, Send, Bot, Loader2 } from "lucide-react"
-import axios from "axios"
+import { useState, useRef, useEffect } from "react";
+import { X, Send, Bot, Loader2 } from "lucide-react";
+import axios from "axios";
+import { useSelector } from "react-redux";
 
 const ChatModal = ({ isOpen, onClose }) => {
-  const [input, setInput] = useState("")
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
-    { type: "bot", content: "Hello! How can I help you with your staking questions today?" },
-  ])
-  const [loading, setLoading] = useState(false)
-  const modalRef = useRef(null)
-  const messagesEndRef = useRef(null)
+    {
+      type: "bot",
+      content:
+        "Hi there! I'm your Prediction Market Assistant powered by Akash LLM. Ask me about your stakes, market trends, or strategies to win big in prediction markets!",
+    },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const modalRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
-  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
-  const GOOGLE_SEARCH_API_KEY = import.meta.env.VITE_GOOGLE_SEARCH_API_KEY
-  const SEARCH_ENGINE_ID = import.meta.env.VITE_GOOGLE_SEARCH_ENGINE_ID
+  // Fetch staking data from Redux store
+  const { stakedEvents } = useSelector((state) => state.stakedEvents);
+
+  // Akash LLM API client configuration
+  const client = axios.create({
+    baseURL: "https://chatapi.akash.network/api/v1",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer sk-huYEDwfK_8exLv6ktAVQiQ",
+    },
+  });
 
   useEffect(() => {
-    // Scroll to bottom whenever messages change
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   useEffect(() => {
-    // Animation for modal entrance
     if (modalRef.current) {
-      modalRef.current.classList.add("animate-in")
+      modalRef.current.classList.add("animate-in");
     }
 
-    // Click outside to close
     const handleClickOutside = (event) => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
-        onClose()
+        onClose();
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [onClose])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
 
-  // Function to search the web for relevant data
-  const searchWeb = async (query) => {
-    try {
-      const res = await axios.get(
-        `https://www.googleapis.com/customsearch/v1?q=${query}&key=${GOOGLE_SEARCH_API_KEY}&cx=${SEARCH_ENGINE_ID}`,
-      )
-      if (res.data.items) {
-        return res.data.items
-          .slice(0, 5)
-          .map((item) => `${item.title}: ${item.snippet}`)
-          .join("\n\n")
-      }
-      return null
-    } catch (error) {
-      console.error("Google Search API Error:", error)
-      return null
-    }
-  }
+  // Function to process HTML response into readable text
+  const processHtmlResponse = (htmlString) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, "text/html");
+    const body = doc.body;
 
-  // Function to process the search results and return an exact answer
-  const generateAIResponse = async (query, searchResults) => {
-    try {
-      const res = await axios.post(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `Given the following search results, extract the most relevant information and provide a direct, factual answer to the query: "${query}".\n\nResults:\n${searchResults}\n\nAnswer in one or two sentences only.`,
-                },
-              ],
-            },
-          ],
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-        },
-      )
-      return res.data.candidates[0]?.content.parts[0]?.text || "No relevant answer found."
-    } catch (error) {
-      console.error("Gemini API Error:", error)
-      return "Error fetching AI response."
+    const processNode = (node) => {
+      let result = "";
+      node.childNodes.forEach((child) => {
+        if (child.nodeType === Node.TEXT_NODE) {
+          result += child.textContent.trim();
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+          const tagName = child.tagName.toLowerCase();
+          switch (tagName) {
+            case "br":
+              result += "\n";
+              break;
+            case "b":
+            case "strong":
+              result += `**${processNode(child)}**`;
+              break;
+            case "i":
+            case "em":
+              result += `*${processNode(child)}*`;
+              break;
+            case "p":
+              result += `${processNode(child)}\n\n`;
+              break;
+            case "ul":
+            case "ol":
+              child.childNodes.forEach((li, index) => {
+                if (li.tagName?.toLowerCase() === "li") {
+                  result += `${
+                    tagName === "ol" ? `${index + 1}.` : "-"
+                  } ${processNode(li)}\n`;
+                }
+              });
+              result += "\n";
+              break;
+            default:
+              result += processNode(child);
+          }
+        }
+      });
+      return result.trim();
+    };
+
+    return processNode(body) || "No content available.";
+  };
+
+  // Function to generate prediction market context from stakedEvents
+  const generatePredictionContext = () => {
+    if (!stakedEvents || stakedEvents.length === 0) {
+      return "The user has no active prediction market stakes currently.";
     }
-  }
+    const totalStaked = stakedEvents.reduce(
+      (sum, event) => sum + Number.parseFloat(event.stakedAmount || 0),
+      0
+    );
+    const activeStakes = stakedEvents.filter((e) => !e.resolved).length;
+    const wins = stakedEvents.filter(
+      (e) => e.resolved && e.selectedOption === (e.winningOption ? "YES" : "NO")
+    ).length;
+
+    return `
+      The user has ${stakedEvents.length} prediction market stakes.
+      Total staked: $${totalStaked.toFixed(2)}.
+      Active predictions: ${activeStakes}.
+      Wins: ${wins} out of ${stakedEvents.length - activeStakes} resolved events.
+      Stake details: ${stakedEvents
+        .map(
+          (e) =>
+            `- ${e.description}: $${e.stakedAmount} on ${e.selectedOption} (Pool: $${(
+              Number.parseFloat(e.totalYesBets) + Number.parseFloat(e.totalNoBets)
+            ).toFixed(2)}, ${e.resolved ? `Outcome: ${e.winningOption ? "YES" : "NO"}` : "Pending"})`
+        )
+        .join("\n")}
+    `;
+  };
+
+  // Function to get response from Akash LLM with fine-tuned prompt
+  const getAkashResponse = async (query) => {
+    try {
+      const predictionContext = generatePredictionContext();
+      const enhancedPrompt = `
+        You are an expert assistant for prediction markets, powered by Akash LLM, focused on helping users succeed in real-world prediction events.
+        Use the following user prediction market data to provide precise, actionable insights:
+        ${predictionContext}
+        
+        User Query: "${query}"
+        
+        Guidelines:
+        - Respond ONLY with the final answer (3-5 sentences max), no internal reasoning or preamble.
+        - For greetings like "hi", reply briefly: "Hello! How can I assist you with prediction markets today?"
+        - For other queries, focus on trends, probabilities, or strategies relevant to prediction markets.
+        - Leverage real-world prediction market knowledge (e.g., event probabilities, sentiment trends) where applicable.
+        - Use HTML tags (<b>, <br>, <ul>) for clarity and emphasis.
+        - Avoid speculation or unrelated advice unless explicitly asked.
+      `;
+
+      const response = await client.post("/chat/completions", {
+        model: "DeepSeek-R1-Distill-Llama-70B",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a prediction market expert providing concise, actionable advice.",
+          },
+          {
+            role: "user",
+            content: enhancedPrompt,
+          },
+        ],
+      });
+
+      const htmlContent =
+        response.data.choices[0]?.message.content || "No response received.";
+      return processHtmlResponse(htmlContent);
+    } catch (error) {
+      console.error("Akash LLM API Error:", error);
+      return "Error fetching response from the AI model.";
+    }
+  };
 
   // Function to handle user input
   const handleSubmit = async (e) => {
-    e?.preventDefault()
+    e?.preventDefault();
 
-    if (!input.trim()) return
+    if (!input.trim()) return;
 
-    // Add user message to chat
-    setMessages((prev) => [...prev, { type: "user", content: input }])
+    setMessages((prev) => [...prev, { type: "user", content: input }]);
+    const userQuery = input;
+    setInput("");
+    setLoading(true);
 
-    // Clear input and set loading
-    const userQuery = input
-    setInput("")
-    setLoading(true)
-
-    // Add typing indicator
-    setMessages((prev) => [...prev, { type: "loading" }])
+    setMessages((prev) => [...prev, { type: "loading" }]);
 
     try {
-      // Search for information
-      const searchResults = await searchWeb(userQuery)
-
-      // Remove loading indicator
-      setMessages((prev) => prev.filter((msg) => msg.type !== "loading"))
-
-      if (!searchResults) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "bot",
-            content: "I couldn't find relevant information for your query. Could you try asking something else?",
-          },
-        ])
-        setLoading(false)
-        return
-      }
-
-      // Generate AI response
-      const aiResponse = await generateAIResponse(userQuery, searchResults)
-
-      // Add bot response to chat
-      setMessages((prev) => [...prev, { type: "bot", content: aiResponse }])
+      const aiResponse = await getAkashResponse(userQuery);
+      setMessages((prev) => prev.filter((msg) => msg.type !== "loading"));
+      setMessages((prev) => [...prev, { type: "bot", content: aiResponse }]);
     } catch (error) {
-      console.error("Error in chat flow:", error)
-      setMessages((prev) => prev.filter((msg) => msg.type !== "loading"))
+      console.error("Error in chat flow:", error);
+      setMessages((prev) => prev.filter((msg) => msg.type !== "loading"));
       setMessages((prev) => [
         ...prev,
         {
           type: "bot",
-          content: "I'm having trouble processing your request. Please try again later.",
+          content:
+            "I'm having trouble processing your request. Please try again later.",
         },
-      ])
+      ]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4">
@@ -157,9 +221,12 @@ const ChatModal = ({ isOpen, onClose }) => {
         <div className="bg-gradient-to-r from-purple-600 via-cyan-500 to-blue-600 p-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Bot className="h-6 w-6 text-white" />
-            <h3 className="text-lg font-bold text-white">Staking Assistant</h3>
+            <h3 className="text-lg font-bold text-white">Prediction Market Assistant</h3>
           </div>
-          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1 transition-colors">
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -167,7 +234,12 @@ const ChatModal = ({ isOpen, onClose }) => {
         {/* Chat messages */}
         <div className="h-[350px] overflow-y-auto p-4 space-y-4 bg-gray-950">
           {messages.map((message, index) => (
-            <div key={index} className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}>
+            <div
+              key={index}
+              className={`flex ${
+                message.type === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
               {message.type === "loading" ? (
                 <div className="bg-gray-800 rounded-lg p-3 max-w-[80%] animate-pulse flex items-center space-x-2">
                   <div
@@ -191,7 +263,15 @@ const ChatModal = ({ isOpen, onClose }) => {
                       : "bg-gray-800 text-gray-100"
                   }`}
                 >
-                  <p className={message.type === "bot" ? "text-gray-100" : "text-white"}>{message.content}</p>
+                  <p
+                    className={
+                      message.type === "bot"
+                        ? "text-gray-100 whitespace-pre-wrap"
+                        : "text-white"
+                    }
+                  >
+                    {message.content}
+                  </p>
                 </div>
               )}
             </div>
@@ -200,12 +280,15 @@ const ChatModal = ({ isOpen, onClose }) => {
         </div>
 
         {/* Input area */}
-        <form onSubmit={handleSubmit} className="p-3 border-t border-gray-800 bg-gray-900 flex items-center">
+        <form
+          onSubmit={handleSubmit}
+          className="p-3 border-t border-gray-800 bg-gray-900 flex items-center"
+        >
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about staking..."
+            placeholder="Ask about predictions, trends, or your stakes..."
             className="flex-1 bg-gray-800 border border-gray-700 rounded-l-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
             disabled={loading}
           />
@@ -213,15 +296,21 @@ const ChatModal = ({ isOpen, onClose }) => {
             type="submit"
             disabled={loading || !input.trim()}
             className={`bg-gradient-to-r from-purple-600 to-blue-600 text-white p-2 rounded-r-lg ${
-              loading || !input.trim() ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"
+              loading || !input.trim()
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:opacity-90"
             }`}
           >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
           </button>
         </form>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ChatModal
+export default ChatModal;
