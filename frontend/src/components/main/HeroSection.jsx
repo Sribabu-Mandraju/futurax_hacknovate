@@ -7,7 +7,7 @@ export default function HeroSection() {
 
   const markets = [
     { name: "Will Bitcoin's price decline to $73,000 by the end of this month, marking a significant market correction?", probability: 68, change: 2.4, volume: "1.2K " },
-    { name: "  Will the Royal Challengers Bengaluru, win their opening match on March 22?", probability: 42, change: -1.8, volume: "3.4k" },
+    { name: "Will Shah Rukh Khan Announce His Next Film Before 1:00AM IST on 6th April 2025?", probability: 42, change: -1.8, volume: "3.4k" },
     { name: "Will Trump's call with Putin lead to progress in Ukraine peace talks?", probability: 73, change: 5.2, volume: "1.4K" },
     {
       name: "SpaceX Mars Landing",
@@ -256,7 +256,7 @@ export default function HeroSection() {
                       {markets[activeMarket].name}
                     </h4>
                     <p className="text-gray-400 text-xs">
-                      Expires Dec 31, 2024
+                      Expires Apr 10, 2025
                     </p>
                   </div>
                   <div className="bg-gray-700/50 rounded-lg px-2 py-1 self-start">

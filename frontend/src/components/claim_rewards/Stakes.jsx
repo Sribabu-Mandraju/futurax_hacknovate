@@ -69,8 +69,8 @@ const Stakes = ({ address }) => {
   };
 
   return (
-    <div className="min-h-screen mt-[80px] bg-gray-900 text-white px-4 py-8 md:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen mt-[80px] w-full max-w-7xl bg-gray-900 text-white px-4 py-8 md:p-6">
+      <div className="mx-auto">
         <DashboardHeader
           title="User Portfolio"
           address={address}
