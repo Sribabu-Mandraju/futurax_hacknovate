@@ -13,4 +13,4 @@ const StakeSchema = new Schema(
   { timestamps: true }
 );
 
-export default model("Stake", StakeSchema);
+export default model("Stake_Model", StakeSchema);
