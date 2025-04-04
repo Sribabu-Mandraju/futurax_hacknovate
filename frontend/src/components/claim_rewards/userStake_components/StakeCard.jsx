@@ -8,8 +8,11 @@ import StatusBadge from "./StakeBadge";
 import { getSigner } from "../../../config/contract.config.js";
 import EventAbi from "../../../abis/EventAbi.json";
 import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
+import { fetchUserStakedEvents } from "../../../store/slices/userStakesSlice";
 
 const StakeCard = ({ event, onClaimReward, walletAddress }) => {
+  const dispatch = useDispatch();
   const [isRefunding, setIsRefunding] = useState(false);
   const [refundTxHash, setRefundTxHash] = useState("");
   const [refundError, setRefundError] = useState("");
@@ -42,6 +45,8 @@ const StakeCard = ({ event, onClaimReward, walletAddress }) => {
       setIsRefunding(true);
       setRefundError("");
       const toastId = toast.loading("Processing refund...");
+
+      // Step 1: Refund stake from the smart contract
       const signer = await getSigner();
       const eventContract = new ethers.Contract(
         event.address,
@@ -51,8 +56,37 @@ const StakeCard = ({ event, onClaimReward, walletAddress }) => {
       const tx = await eventContract.refundStake();
       const receipt = await tx.wait();
       setRefundTxHash(receipt.hash);
+
+      // Step 2: Call backend to delete the stake after successful refund
+      const deleteResponse = await fetch(
+        `${import.meta.env.VITE_BACKEND_API_URL}/stake/delete`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            stakeAddress: event.address,
+            userAddress: walletAddress,
+          }),
+        }
+      );
+
+      if (!deleteResponse.ok) {
+        const errorData = await deleteResponse.json();
+        throw new Error(
+          errorData.message || "Failed to delete stake from backend"
+        );
+      }
+
+      const deleteData = await deleteResponse.json();
+      console.log("Stake deleted from backend:", deleteData);
+
+      // Step 3: Refetch updated stakes list
+      await dispatch(fetchUserStakedEvents(walletAddress)).unwrap();
+
       toast.success(
-        `Stake refunded successfully!\nTx Hash: ${receipt.hash.slice(
+        `Stake refunded and deleted successfully!\nTx Hash: ${receipt.hash.slice(
           0,
           6
         )}...${receipt.hash.slice(-6)}`,
@@ -183,7 +217,7 @@ const StakeCard = ({ event, onClaimReward, walletAddress }) => {
             </button>
             {refundTxHash && (
               <a
-                href={`https://sepolia.etherscan.io/tx/${refundTxHash}`}
+                href={`https://sepolia.etherscan.io/tx/${refundTxHashInforme}`}
                 target="_blank"
                 className="text-xs text-green-400 underline"
               >
