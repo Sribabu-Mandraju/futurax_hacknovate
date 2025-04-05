@@ -122,7 +122,7 @@ const StakeCard = ({ event, onClaimReward, walletAddress }) => {
             <div className="grid grid-cols-2 gap-2">
               <span className="text-gray-400">Staked:</span>
               <span className="text-white text-right">
-                {formatCurrency(event.stakedAmount)}
+               $ {formatCurrency(event.stakedAmount)}
               </span>
               <span className="text-gray-400">Position:</span>
               <span
@@ -152,7 +152,7 @@ const StakeCard = ({ event, onClaimReward, walletAddress }) => {
               )}
               <span className="text-gray-400">Pool Size:</span>
               <span className="text-white text-right">
-                {formatCurrency(totalPool)}
+                $ {formatCurrency(totalPool)}
               </span>
               {/* {!event.resolved && (
                 <>
