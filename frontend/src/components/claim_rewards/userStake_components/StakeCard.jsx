@@ -154,16 +154,16 @@ const StakeCard = ({ event, onClaimReward, walletAddress }) => {
               <span className="text-white text-right">
                 {formatCurrency(totalPool)}
               </span>
-              {!event.resolved && (
+              {/* {!event.resolved && (
                 <>
                   <span className="text-gray-400">Potential Reward:</span>
                   <span className="text-indigo-400 text-right">
                     ~{formatCurrency(potentialReward)}
                   </span>
                 </>
-              )}
+              )} */}
             </div>
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <div className="flex justify-between text-xs text-gray-400">
                 <span>{yesPercentage.toFixed(1)}% YES</span>
                 <span>{(100 - yesPercentage).toFixed(1)}% NO</span>
@@ -174,7 +174,7 @@ const StakeCard = ({ event, onClaimReward, walletAddress }) => {
                   style={{ width: `${yesPercentage}%` }}
                 ></div>
               </div>
-            </div>
+            </div> */}
           </div>
           {event.image && (
             <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-600/50">

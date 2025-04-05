@@ -3,17 +3,12 @@ export const formatCurrency = (value) => {
   const numValue = Number.parseFloat(value);
   return numValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
-
-export const formatDate = (secondsUntilDeadline) => {
-  if (!secondsUntilDeadline) return "";
-  const deadlineTimestamp = Date.now() + secondsUntilDeadline * 1000;
-  const date = new Date(deadlineTimestamp);
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+export const formatDate = (timestamp) => {
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
-  }).replace(",", "");
+  });
 };
